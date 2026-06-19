@@ -1,6 +1,6 @@
 {
   "name": "px-diff",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Visual pixel-by-pixel comparison of web pages using Playwright",
   "type": "module",
   "bin": {

@@ -5,7 +5,7 @@ Visual pixel-by-pixel comparison of web pages. Renders pages in a headless brows
 ## Install
 
 ```bash
-bun install px-diff
+npm i px-diff
 ```
 
 ## Usage
@@ -27,12 +27,60 @@ px-diff url1 url2 --out ./my-diffs
 px-diff url1 url2 --json --base64
 ```
 
+## Example
+
+```
+$ px-diff https://staging.app https://prod.app
+
+  Comparing 2 URLs (1 pair)
+
+  ─── https://staging.app
+   vs  https://prod.app
+  Resolution:  1440x900
+  Difference:  3.21% (41,602 px)
+  Match:       96.79%
+  Regions:     4
+    Region 1: (24,12) 320x48    →  .px-diff/region-1-diff.png
+    Region 2: (140,210) 680x90  →  .px-diff/region-2-diff.png
+    Region 3: (500,410) 120x36  →  .px-diff/region-3-diff.png
+    Region 4: (0,840) 1440x60   →  .px-diff/region-4-diff.png
+  Full overlay: .px-diff/diff-full.png
+```
+
+```
+$ cat .px-diff/info.txt
+
+px-diff
+
+staging.app  vs  prod.app
+Viewport: 1440x900
+Rendered: 1440x900
+
+Difference: 3.21%
+Match: 96.79%
+Mismatched pixels: 41,602 / 1,296,000
+
+Diff regions: 4
+
+  Region 1: position (24, 12) size 320x48
+    Image: region-1-diff.png  (side-by-side: staging.app left, prod.app right)
+  Region 2: position (140, 210) size 680x90
+    Image: region-2-diff.png  (side-by-side: staging.app left, prod.app right)
+  Region 3: position (500, 410) size 120x36
+    Image: region-3-diff.png  (side-by-side: staging.app left, prod.app right)
+  Region 4: position (0, 840) size 1440x60
+    Image: region-4-diff.png  (side-by-side: staging.app left, prod.app right)
+
+Full overlay: diff-full.png  (prod.app with red outlines on diff regions)
+```
+
 ## Output
 
-For each pair of URLs, px-diff generates:
+All output is written to `.px-diff/` by default:
 
-- **`diff-full.png`** — Full page screenshot with red outlines around differences and a light white wash over unchanged areas
-- **`region-N-diff.png`** — Side-by-side crops of each diff region (page 1 on the left, page 2 on the right)
+- **`info.txt`** — Plain-text summary with diff %, regions, and image references
+- **`diff-full.png`** — Full page screenshot with red outlines around differences
+- **`region-N-diff.png`** — Side-by-side crops of each diff region
 
 ## Options
 
@@ -49,7 +97,7 @@ For each pair of URLs, px-diff generates:
 | `--outline-color <r,g,b>` | Outline box color | `255,0,0` |
 | `--outline-thickness <px>` | Outline box width | `3` |
 | `--outline-padding <px>` | Space inside outline box | `10` |
-| `--out <dir>` | Output directory | `./diff-output` |
+| `--out <dir>` | Output directory | `.px-diff` |
 | `--concurrency <n>` | Max parallel browsers | `3` |
 | `--base64` | Return images as base64 (no disk writes) | `false` |
 | `--json` | Output results as JSON | `false` |
@@ -60,12 +108,15 @@ For each pair of URLs, px-diff generates:
 import { comparePair, defaults } from "px-diff";
 
 const result = await comparePair(
-  "https://example.com",
-  "https://google.com",
+  "https://staging.app",
+  "https://prod.app",
   { ...defaults },
-  "my-comparison",
+  "staging-vs-prod",
 );
 
-console.log(result.diffPercent); // e.g. 2.63
-console.log(result.regions);    // array of { x1, y1, x2, y2 }
+result.diffPercent       // 3.21
+result.matchPercent      // 96.79
+result.mismatchedPixels  // 41602
+result.regions           // [{ x1, y1, x2, y2 }, ...]
+result.outputDir         // ".px-diff/staging-vs-prod"
 ```
