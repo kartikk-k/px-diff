@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>px-diff — Visual pixel-by-pixel comparison of web pages</title>
+    <meta name="description" content="Render pages in a headless browser, compare every pixel, and get clear diff images showing exactly what changed and where.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', '"SF Mono"', '"Fira Code"', 'monospace'],
+                    },
+                    colors: {
+                        surface: {
+                            0: '#09090b',
+                            1: '#111113',
+                            2: '#18181b',
+                            3: '#1f1f23',
+                            4: '#27272a',
+                        },
+                        accent: '#ef4444',
+                        muted: '#71717a',
+                    },
+                },
+            },
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        html { scroll-behavior: smooth; }
+        body { background: #09090b; }
+        .gradient-text {
+            background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .code-block {
+            background: #111113;
+            border: 1px solid #27272a;
+        }
+        .card {
+            background: #111113;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .card:hover {
+            border-color: rgba(255,255,255,0.1);
+        }
+        .glow {
+            box-shadow: 0 0 60px -12px rgba(239, 68, 68, 0.15);
+        }
+        .terminal {
+            background: #0c0c0e;
+            border: 1px solid #27272a;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        .terminal-dots span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .copy-btn:active { transform: scale(0.95); }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+    </style>
+</head>
+
+<body class="text-zinc-300 font-sans">
+
+    <!-- Nav -->
+    <nav class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface-0/80 border-b border-white/5">
+        <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-white font-semibold tracking-tight">px-diff</span>
+            </div>
+            <div class="flex items-center gap-6 text-sm">
+                <a href="#features" class="text-muted hover:text-white transition-colors">Features</a>
+                <a href="#usage" class="text-muted hover:text-white transition-colors">Usage</a>
+                <a href="#api" class="text-muted hover:text-white transition-colors">API</a>
+                <a href="https://github.com/nickhalodesign/px-diff" target="_blank" class="text-muted hover:text-white transition-colors">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="pt-32 pb-20 px-6">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-2 border border-white/5 text-xs text-muted mb-8">
+                <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                Open source CLI tool
+            </div>
+
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight gradient-text leading-[1.1] mb-6">
+                Pixel-perfect<br>visual diffs
+            </h1>
+
+            <p class="text-lg text-zinc-400 max-w-xl mx-auto mb-10 leading-relaxed">
+                Compare web pages pixel by pixel. Renders in a real browser, detects every visual difference, and outputs clear side-by-side images with exact change locations.
+            </p>
+
+            <!-- Install command -->
+            <div class="inline-flex items-center gap-3 code-block rounded-lg px-5 py-3 font-mono text-sm">
+                <span class="text-muted select-none">$</span>
+                <span class="text-zinc-200" id="install-cmd">npx px-diff url1 url2</span>
+                <button onclick="copyInstall()" class="copy-btn text-muted hover:text-white transition-colors ml-2" title="Copy">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Terminal demo -->
+    <section class="pb-24 px-6">
+        <div class="max-w-3xl mx-auto">
+            <div class="terminal rounded-xl overflow-hidden glow">
+                <!-- Title bar -->
+                <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+                    <div class="terminal-dots flex gap-2">
+                        <span class="bg-[#ff5f57]"></span>
+                        <span class="bg-[#febc2e]"></span>
+                        <span class="bg-[#28c840]"></span>
+                    </div>
+                    <span class="text-xs text-muted font-mono ml-2">terminal</span>
+                </div>
+                <!-- Terminal content -->
+                <div class="p-5 font-mono text-[13px] leading-relaxed">
+                    <div class="text-muted">$ px-diff https://staging.app https://prod.app</div>
+                    <div class="mt-4 text-zinc-500">Comparing 2 URLs (1 pair)</div>
+                    <div class="mt-3">
+                        <span class="text-zinc-400">  --- staging.app</span><br>
+                        <span class="text-zinc-400">   vs  prod.app</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="text-zinc-500">  Resolution:  </span><span class="text-zinc-300">1440x900</span><br>
+                        <span class="text-zinc-500">  Difference:  </span><span class="text-accent font-medium">3.21%</span>
+                        <span class="text-zinc-600"> (41,602 px)</span><br>
+                        <span class="text-zinc-500">  Match:       </span><span class="text-emerald-400">96.79%</span><br>
+                        <span class="text-zinc-500">  Regions:     </span><span class="text-zinc-300">4</span>
+                    </div>
+                    <div class="mt-3 text-zinc-600">
+                        Region 1: (24,12) 320x48  &rarr;  .px-diff/region-1-diff.png<br>
+                        Region 2: (140,210) 680x90 &rarr;  .px-diff/region-2-diff.png<br>
+                        Region 3: (500,410) 120x36 &rarr;  .px-diff/region-3-diff.png<br>
+                        Region 4: (0,840) 1440x60  &rarr;  .px-diff/region-4-diff.png
+                    </div>
+                    <div class="mt-3 text-zinc-500">  Full overlay: .px-diff/diff-full.png</div>
+                    <div class="mt-4 text-muted">$ <span class="cursor-blink">|</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="py-24 px-6 border-t border-white/5">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3">Built for precision</h2>
+                <p class="text-muted">Everything you need to catch visual regressions.</p>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Feature cards -->
+                <div class="card rounded-xl p-6 transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-4">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                    </div>
+                    <h3 class="text-white font-medium mb-1.5">Side-by-side diffs</h3>
+                    <p class="text-sm text-muted leading-relaxed">Each diff region is cropped and placed side by side. See exactly what changed at a glance.</p>
+                </div>
+
+                <div class="card rounded-xl p-6 transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-4">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <h3 class="text-white font-medium mb-1.5">Pixel-level accuracy</h3>
+                    <p class="text-sm text-muted leading-relaxed">Configurable threshold from exact match to lenient. Catches subpixel rendering differences.</p>
+                </div>
+
+                <div class="card rounded-xl p-6 transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-4">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h3 class="text-white font-medium mb-1.5">CLI + programmatic</h3>
+                    <p class="text-sm text-muted leading-relaxed">Run from the terminal or import as a library. JSON and base64 output modes for CI pipelines.</p>
+                </div>
+
+                <div class="card rounded-xl p-6 transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-4">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                    </div>
+                    <h3 class="text-white font-medium mb-1.5">Multi-URL support</h3>
+                    <p class="text-sm text-muted leading-relaxed">Pass up to 100 URLs. Every unique pair is compared with concurrency control to keep CPUs happy.</p>
+                </div>
+
+                <div class="card rounded-xl p-6 transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-4">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <h3 class="text-white font-medium mb-1.5">info.txt report</h3>
+                    <p class="text-sm text-muted leading-relaxed">Every run writes a plain-text summary. Readable by humans and AI agents, with image references.</p>
+                </div>
+
+                <div class="card rounded-xl p-6 transition-colors">
+                    <div class="w-9 h-9 rounded-lg bg-surface-3 flex items-center justify-center mb-4">
+                        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <h3 class="text-white font-medium mb-1.5">Fully configurable</h3>
+                    <p class="text-sm text-muted leading-relaxed">Viewport size, threshold, overlay opacity, outline color, region padding. Every visual detail is a flag.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Usage -->
+    <section id="usage" class="py-24 px-6 border-t border-white/5">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3 text-center">Quick start</h2>
+            <p class="text-muted text-center mb-12">Up and running in seconds.</p>
+
+            <div class="space-y-6">
+                <!-- Step 1 -->
+                <div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-surface-3 text-xs text-muted flex items-center justify-center font-mono">1</span>
+                        <span class="text-sm text-zinc-400">Compare two pages</span>
+                    </div>
+                    <div class="code-block rounded-lg p-4 font-mono text-sm">
+                        <span class="text-muted select-none">$ </span><span class="text-zinc-200">px-diff https://staging.app https://prod.app</span>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-surface-3 text-xs text-muted flex items-center justify-center font-mono">2</span>
+                        <span class="text-sm text-zinc-400">Check the results</span>
+                    </div>
+                    <div class="code-block rounded-lg p-4 font-mono text-sm leading-relaxed">
+                        <span class="text-muted select-none">$ </span><span class="text-zinc-200">cat .px-diff/info.txt</span>
+                        <div class="mt-3 text-zinc-500">
+                            px-diff<br><br>
+                            staging.app  vs  prod.app<br>
+                            Difference: 3.21%<br>
+                            Diff regions: 4<br><br>
+                            <span class="text-zinc-600">  Region 1: position (24, 12) size 320x48</span><br>
+                            <span class="text-zinc-600">    Image: region-1-diff.png</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-surface-3 text-xs text-muted flex items-center justify-center font-mono">3</span>
+                        <span class="text-sm text-zinc-400">Compare multiple pages at once</span>
+                    </div>
+                    <div class="code-block rounded-lg p-4 font-mono text-sm">
+                        <span class="text-muted select-none">$ </span><span class="text-zinc-200">px-diff https://a.com https://b.com https://c.com --concurrency 2</span>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-6 h-6 rounded-full bg-surface-3 text-xs text-muted flex items-center justify-center font-mono">4</span>
+                        <span class="text-sm text-zinc-400">Use in CI with JSON output</span>
+                    </div>
+                    <div class="code-block rounded-lg p-4 font-mono text-sm">
+                        <span class="text-muted select-none">$ </span><span class="text-zinc-200">px-diff url1 url2 --json --base64</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API -->
+    <section id="api" class="py-24 px-6 border-t border-white/5">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3 text-center">Programmatic API</h2>
+            <p class="text-muted text-center mb-12">Import and use in your own scripts and test suites.</p>
+
+            <div class="code-block rounded-xl p-5 font-mono text-sm leading-relaxed overflow-x-auto">
+                <div><span class="text-violet-400">import</span> <span class="text-zinc-300">{ comparePair, defaults }</span> <span class="text-violet-400">from</span> <span class="text-emerald-400">"px-diff"</span><span class="text-zinc-500">;</span></div>
+                <div class="mt-3"><span class="text-violet-400">const</span> <span class="text-zinc-300">result</span> <span class="text-zinc-500">=</span> <span class="text-violet-400">await</span> <span class="text-amber-300">comparePair</span><span class="text-zinc-500">(</span></div>
+                <div><span class="text-emerald-400">  "https://staging.app"</span><span class="text-zinc-500">,</span></div>
+                <div><span class="text-emerald-400">  "https://prod.app"</span><span class="text-zinc-500">,</span></div>
+                <div><span class="text-zinc-500">  { ...defaults },</span></div>
+                <div><span class="text-emerald-400">  "staging-vs-prod"</span><span class="text-zinc-500">,</span></div>
+                <div><span class="text-zinc-500">);</span></div>
+                <div class="mt-3"><span class="text-zinc-300">result</span><span class="text-zinc-500">.</span><span class="text-zinc-300">diffPercent</span>  <span class="text-zinc-600">// 3.21</span></div>
+                <div><span class="text-zinc-300">result</span><span class="text-zinc-500">.</span><span class="text-zinc-300">regions</span>      <span class="text-zinc-600">// [{ x1, y1, x2, y2 }, ...]</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Options table -->
+    <section class="py-24 px-6 border-t border-white/5">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3 text-center">Options</h2>
+            <p class="text-muted text-center mb-12">Every detail is configurable via CLI flags.</p>
+
+            <div class="code-block rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/5 text-left">
+                            <th class="px-5 py-3 text-muted font-medium">Flag</th>
+                            <th class="px-5 py-3 text-muted font-medium">Description</th>
+                            <th class="px-5 py-3 text-muted font-medium text-right">Default</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-mono text-xs">
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--width</td><td class="px-5 py-2.5 font-sans text-zinc-500">Viewport width</td><td class="px-5 py-2.5 text-zinc-500 text-right">1440</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--height</td><td class="px-5 py-2.5 font-sans text-zinc-500">Viewport height</td><td class="px-5 py-2.5 text-zinc-500 text-right">900</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--threshold</td><td class="px-5 py-2.5 font-sans text-zinc-500">Pixel sensitivity (0-1)</td><td class="px-5 py-2.5 text-zinc-500 text-right">0.1</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--padding</td><td class="px-5 py-2.5 font-sans text-zinc-500">Context around regions</td><td class="px-5 py-2.5 text-zinc-500 text-right">40</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--overlay-opacity</td><td class="px-5 py-2.5 font-sans text-zinc-500">White wash intensity</td><td class="px-5 py-2.5 text-zinc-500 text-right">0.4</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--outline-color</td><td class="px-5 py-2.5 font-sans text-zinc-500">Outline box color (r,g,b)</td><td class="px-5 py-2.5 text-zinc-500 text-right">255,0,0</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--concurrency</td><td class="px-5 py-2.5 font-sans text-zinc-500">Max parallel browsers</td><td class="px-5 py-2.5 text-zinc-500 text-right">3</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--out</td><td class="px-5 py-2.5 font-sans text-zinc-500">Output directory</td><td class="px-5 py-2.5 text-zinc-500 text-right">.px-diff</td></tr>
+                        <tr class="border-b border-white/[0.03]"><td class="px-5 py-2.5 text-zinc-300">--json</td><td class="px-5 py-2.5 font-sans text-zinc-500">Output as JSON</td><td class="px-5 py-2.5 text-zinc-500 text-right">false</td></tr>
+                        <tr><td class="px-5 py-2.5 text-zinc-300">--base64</td><td class="px-5 py-2.5 font-sans text-zinc-500">Images as base64 strings</td><td class="px-5 py-2.5 text-zinc-500 text-right">false</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-white/5">
+        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span class="text-sm text-muted">px-diff</span>
+            <div class="flex items-center gap-6 text-sm text-muted">
+                <a href="https://www.npmjs.com/package/px-diff" target="_blank" class="hover:text-white transition-colors">npm</a>
+                <a href="https://github.com/nickhalodesign/px-diff" target="_blank" class="hover:text-white transition-colors">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function copyInstall() {
+            navigator.clipboard.writeText('npx px-diff url1 url2');
+            const btn = document.querySelector('.copy-btn');
+            btn.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            setTimeout(() => {
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+            }, 2000);
+        }
+    </script>
+
+</body>
+
+</html>
