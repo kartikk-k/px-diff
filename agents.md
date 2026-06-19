@@ -4,7 +4,13 @@ Pixel-by-pixel visual comparison of web pages.
 
 Renders each URL in headless Chromium via Playwright, compares every pixel, detects diff regions, and outputs side-by-side crops and a full-page overlay with red outlines on changed areas.
 
-## Install
+## Quick start
+
+```
+npx px-diff <url1> <url2>
+```
+
+## Install (as dependency)
 
 ```
 npm i px-diff
