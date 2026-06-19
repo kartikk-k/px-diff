@@ -1,5 +1,5 @@
 import { PNG } from "pngjs";
-import type { Region, RGB } from "./config.ts";
+import type { Region, RGB } from "./config.js";
 
 /** Pad an image to target dimensions, filling extra space with transparent black */
 export function padImage(img: PNG, targetWidth: number, targetHeight: number): PNG {

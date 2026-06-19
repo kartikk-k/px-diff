@@ -4,13 +4,18 @@
   "description": "Visual pixel-by-pixel comparison of web pages using Playwright",
   "type": "module",
   "bin": {
-    "px-diff": "./src/cli.ts"
+    "px-diff": "./dist/cli.js"
   },
-  "module": "index.ts",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./index.ts"
+    ".": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build",
     "start": "bun src/cli.ts"
   },
   "dependencies": {
@@ -19,7 +24,9 @@
     "pngjs": "^7.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/node": "^26.0.0",
+    "@types/pngjs": "^6.0.5"
   },
   "peerDependencies": {
     "typescript": "^5"

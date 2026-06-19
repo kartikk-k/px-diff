@@ -2,9 +2,9 @@ import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import fs from "fs";
 import path from "path";
-import type { DiffOptions, Region, ComparisonResult } from "./config.ts";
-import { screenshotPage } from "./screenshot.ts";
-import { padImage, cropRegion, createSideBySide, createFullDiffOverlay } from "./image.ts";
+import type { DiffOptions, Region, ComparisonResult } from "./config.js";
+import { screenshotPage } from "./screenshot.js";
+import { padImage, cropRegion, createSideBySide, createFullDiffOverlay } from "./image.js";
 
 /** Extract domain+path from a URL, or return the raw string for file paths */
 function toShortLabel(url: string): string {
@@ -229,9 +229,9 @@ export async function comparePair(
     fs.mkdirSync(pairDir, { recursive: true });
 
     const writePromises = Object.entries(images).map(([name, buf]) =>
-      Bun.write(path.join(pairDir, name), buf),
+      fs.promises.writeFile(path.join(pairDir, name), buf),
     );
-    writePromises.push(Bun.write(path.join(pairDir, "info.txt"), infoTxt));
+    writePromises.push(fs.promises.writeFile(path.join(pairDir, "info.txt"), infoTxt));
     await Promise.all(writePromises);
   }
 

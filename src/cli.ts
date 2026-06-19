@@ -1,11 +1,21 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import path from "path";
-import { defaults } from "./config.ts";
-import type { DiffOptions } from "./config.ts";
-import { comparePair } from "./compare.ts";
+import { spawn } from "child_process";
+import { defaults } from "./config.js";
+import type { DiffOptions } from "./config.js";
+import { comparePair } from "./compare.js";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+/** Spawn a child process and return its exit code */
+function runCommand(cmd: string, args: string[]): Promise<number> {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { stdio: "inherit", shell: true });
+    child.on("close", (code) => resolve(code ?? 1));
+    child.on("error", () => resolve(1));
+  });
+}
 
 /** Resolve a CLI argument to a full URL (handles local file paths) */
 function toUrl(input: string): string {
@@ -75,11 +85,7 @@ async function ensurePlaywright(): Promise<boolean> {
       // In CI, just install automatically
       if (process.env.CI) {
         console.log("  CI detected — installing Chromium automatically...\n");
-        const proc = Bun.spawn(["bunx", "playwright", "install", "chromium", "--with-deps"], {
-          stdout: "inherit",
-          stderr: "inherit",
-        });
-        const code = await proc.exited;
+        const code = await runCommand("npx", ["playwright", "install", "chromium", "--with-deps"]);
         if (code !== 0) {
           console.error("  Failed to install Playwright browsers.");
           return false;
@@ -96,11 +102,7 @@ async function ensurePlaywright(): Promise<boolean> {
 
       if (response === "y" || response === "yes") {
         console.log("\n  Installing Chromium...\n");
-        const proc = Bun.spawn(["bunx", "playwright", "install", "chromium"], {
-          stdout: "inherit",
-          stderr: "inherit",
-        });
-        const code = await proc.exited;
+        const code = await runCommand("npx", ["playwright", "install", "chromium"]);
         if (code !== 0) {
           console.error("  Failed to install Playwright browsers.");
           return false;
